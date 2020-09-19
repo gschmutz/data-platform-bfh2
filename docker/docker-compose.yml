@@ -1,0 +1,143 @@
+# =====================================================
+# Platform: default
+# =====================================================
+version: '3.0'
+services:
+  #  ================================== Apache Spark 2.x ========================================== #
+  spark-master:
+    image: trivadis/apache-spark-master:2.4.7-hadoop2.8
+    container_name: spark-master
+    hostname: spark-master
+    ports:
+      - 6066:6066
+      - 7077:7077
+      - 8080:8080
+      - 4040-4044:4040-4044
+    env_file:
+      - ./conf/hadoop.env
+    environment:
+      CORE_CONF_fs_defaultFS: file:///tmp
+      SPARK_PUBLIC_DNS: ${PUBLIC_IP}
+      INIT_DAEMON_STEP: setup_spark
+      SPARK_DEFAULTS_CONF_spark_jars_repositories:
+      SPARK_DEFAULTS_CONF_spark_jars_packages:
+      SPARK_DEFAULTS_CONF_spark_jars_excludes:
+      SPARK_DEFAULTS_CONF_spark_jars:
+      SPARK_DEFAULTS_CONF_spark_jars_ivySettings:
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_endpoint: http://minio:9000
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_path_style_access: 'true'
+      SPARK_DEFAULTS_CONF_spark_sql_catalogImplementation: in-memory
+      SPARK_DEFAULTS_CONF_spark_sql_warehouse_dir: s3a://hive-bucket/warehouse
+      SPARK_DEFAULTS_CONF_spark_yarn_dist_files: /spark/conf/hive-site.xml
+      SPARK_DEFAULTS_CONF_spark_driver_extraJavaOptions:
+      SPARK_DEFAULTS_CONF_spark_executor_extraJavaOptions:
+    volumes:
+      - ./data-transfer:/data-transfer
+      - ./plugins/spark/jars:/extra-jars
+      - ./container-volume/spark/logs/:/var/log/spark/logs
+    restart: unless-stopped
+  spark-worker-1:
+    image: trivadis/apache-spark-worker:2.4.7-hadoop2.8
+    container_name: spark-worker-1
+    hostname: spark-worker-1
+    depends_on:
+      - spark-master
+    ports:
+      - 28111:28111
+    env_file:
+      - ./conf/hadoop.env
+    environment:
+      SPARK_MASTER: spark://spark-master:7077
+      CORE_CONF_fs_defaultFS: file:///tmp
+#      SPARK_WORKER_CORES: 2
+#      SPARK_WORKER_MEMORY: 1g
+      SPARK_WORKER_WEBUI_PORT: '28111'
+      SPARK_WORKER_OPTS: -Dspark.worker.cleanup.enabled=true -Dspark.worker.cleanup.appDataTtl=604800
+      SPARK_PUBLIC_DNS: ${PUBLIC_IP}
+      SPARK_DEFAULTS_CONF_spark_jars_repositories:
+      SPARK_DEFAULTS_CONF_spark_jars_packages:
+      SPARK_DEFAULTS_CONF_spark_jars_excludes:
+      SPARK_DEFAULTS_CONF_spark_jars:
+      SPARK_DEFAULTS_CONF_spark_jars_ivySettings:
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_endpoint: http://minio:9000
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_path_style_access: 'true'
+      SPARK_DEFAULTS_CONF_spark_sql_catalogImplementation: in-memory
+      SPARK_DEFAULTS_CONF_spark_sql_warehouse_dir: s3a://hive-bucket/warehouse
+      SPARK_DEFAULTS_CONF_spark_yarn_dist_files: /spark/conf/hive-site.xml
+      SPARK_DEFAULTS_CONF_spark_driver_extraJavaOptions:
+      SPARK_DEFAULTS_CONF_spark_executor_extraJavaOptions:
+    volumes:
+      - ./data-transfer:/data-transfer
+      - ./plugins/spark/jars:/extra-jars
+      - ./container-volume/spark/logs/:/var/log/spark/logs
+    restart: unless-stopped
+  spark-worker-2:
+    image: trivadis/apache-spark-worker:2.4.7-hadoop2.8
+    container_name: spark-worker-2
+    hostname: spark-worker-2
+    depends_on:
+      - spark-master
+    ports:
+      - 28112:28112
+    env_file:
+      - ./conf/hadoop.env
+    environment:
+      SPARK_MASTER: spark://spark-master:7077
+      CORE_CONF_fs_defaultFS: file:///tmp
+#      SPARK_WORKER_CORES: 2
+#      SPARK_WORKER_MEMORY: 1g
+      SPARK_WORKER_WEBUI_PORT: '28112'
+      SPARK_WORKER_OPTS: -Dspark.worker.cleanup.enabled=true -Dspark.worker.cleanup.appDataTtl=604800
+      SPARK_PUBLIC_DNS: ${PUBLIC_IP}
+      SPARK_DEFAULTS_CONF_spark_jars_repositories:
+      SPARK_DEFAULTS_CONF_spark_jars_packages:
+      SPARK_DEFAULTS_CONF_spark_jars_excludes:
+      SPARK_DEFAULTS_CONF_spark_jars:
+      SPARK_DEFAULTS_CONF_spark_jars_ivySettings:
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_endpoint: http://minio:9000
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_path_style_access: 'true'
+      SPARK_DEFAULTS_CONF_spark_sql_catalogImplementation: in-memory
+      SPARK_DEFAULTS_CONF_spark_sql_warehouse_dir: s3a://hive-bucket/warehouse
+      SPARK_DEFAULTS_CONF_spark_yarn_dist_files: /spark/conf/hive-site.xml
+      SPARK_DEFAULTS_CONF_spark_driver_extraJavaOptions:
+      SPARK_DEFAULTS_CONF_spark_executor_extraJavaOptions:
+    volumes:
+      - ./data-transfer:/data-transfer
+      - ./plugins/spark/jars:/extra-jars
+      - ./container-volume/spark/logs/:/var/log/spark/logs
+    restart: unless-stopped
+  spark-history:
+    image: trivadis/apache-spark-worker:2.4.7-hadoop2.8
+    command: /spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
+    container_name: spark-history
+    hostname: spark-history
+    labels:
+      com.mdps.service.webui.name: Spark History Server
+      com.mdps.service.webui.url: http://${PUBLIC_IP}:28117
+      com.mdps.service.restapi.name: Spark History Server
+      com.mdps.service.restapi.url: http://${PUBLIC_IP}:28117/api/v1
+    expose:
+      - 18080
+    ports:
+      - 28117:18080
+    environment:
+      SPARK_DEFAULTS_CONF_spark_jars_repositories:
+      SPARK_DEFAULTS_CONF_spark_jars_packages:
+      SPARK_DEFAULTS_CONF_spark_jars_excludes:
+      SPARK_DEFAULTS_CONF_spark_jars_ivySettings:
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_impl: org.apache.hadoop.fs.s3a.S3AFileSystem
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_endpoint: http://minio:9000
+      SPARK_DEFAULTS_CONF_spark_hadoop_fs_s3a_path_style_access: 'true'
+      SPARK_DEFAULTS_CONF_spark_sql_catalogImplementation: in-memory
+      SPARK_DEFAULTS_CONF_spark_sql_warehouse_dir: s3a://hive-bucket/warehouse
+      SPARK_DEFAULTS_CONF_spark_yarn_dist_files: /spark/conf/hive-site.xml
+      SPARK_DEFAULTS_CONF_spark_driver_extraJavaOptions:
+      SPARK_DEFAULTS_CONF_spark_executor_extraJavaOptions:
+    volumes:
+      - ./data-transfer:/data-transfer
+      - ./plugins/spark/jars:/extra-jars
+      - ./container-volume/spark/logs/:/var/log/spark/logs
+    restart: unless-stopped
